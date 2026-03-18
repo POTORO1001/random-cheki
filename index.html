@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ランダムチェキ抽選｜ポラロイド風</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    :root{
+      --bg1:#fff8fc;
+      --bg2:#ffeef6;
+      --bg3:#fffdfd;
+      --card:#ffffffcc;
+      --text:#5a3d4a;
+      --muted:#8f7280;
+      --accent:#ff6cab;
+      --accent2:#ff9bc6;
+      --accent3:#ffd7e8;
+      --line:#f4d9e6;
+      --gold1:#ffe8a3;
+      --gold2:#ffd56b;
+      --shadow:0 14px 34px rgba(187, 106, 141, 0.15);
+      --radius:28px;
+    }
+
+    body{
+      margin:0;
+      min-height:100vh;
+      font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP",sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(circle at 12% 15%, rgba(255,255,255,.95) 0 7%, transparent 8%),
+        radial-gradient(circle at 84% 18%, rgba(255,255,255,.65) 0 6%, transparent 7%),
+        radial-gradient(circle at 22% 82%, rgba(255,255,255,.75) 0 8%, transparent 9%),
+        radial-gradient(circle at 76% 76%, rgba(255,255,255,.55) 0 6%, transparent 7%),
+        linear-gradient(180deg, var(--bg1), var(--bg2) 60%, var(--bg3));
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+      overflow-x:hidden;
+    }
+
+    .wrap{
+      width:100%;
+      max-width:680px;
+      background:var(--card);
+      backdrop-filter: blur(8px);
+      border:1px solid rgba(255,255,255,.9);
+      border-radius:32px;
+      box-shadow:var(--shadow);
+      padding:22px 18px 26px;
+      position:relative;
+      overflow:hidden;
+    }
+
+    .wrap::before{
+      content:"";
+      position:absolute;
+      width:260px;
+      height:260px;
+      right:-80px;
+      top:-90px;
+      background:radial-gradient(circle, rgba(255,255,255,.55), transparent 68%);
+      pointer-events:none;
+    }
+
+    .header{
+      text-align:center;
+      position:relative;
+      z-index:2;
+      margin-bottom:14px;
+    }
+
+    .mini-badge{
+      display:inline-block;
+      padding:6px 12px;
+      border-radius:999px;
+      background:linear-gradient(90deg, #fff4f9, #ffe9f3);
+      color:#e24a94;
+      font-size:12px;
+      font-weight:800;
+      letter-spacing:.08em;
+      box-shadow:0 6px 16px rgba(255,108,171,.12);
+      margin-bottom:10px;
+    }
+
+    h1{
+      margin:0;
+      font-size:30px;
+      line-height:1.2;
+      color:#df458f;
+      letter-spacing:.03em;
+    }
+
+    .sub{
+      margin:10px 0 0;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.8;
+    }
+
+    .machine{
+      margin-top:18px;
+      border-radius:30px;
+      background:linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,247,251,.96));
+      border:1px solid #f5dbe8;
+      padding:16px;
+      position:relative;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.85);
+    }
+
+    .machine::before,
+    .machine::after{
+      content:"✦";
+      position:absolute;
+      color:#ffc6dd;
+      font-size:18px;
+      pointer-events:none;
+    }
+
+    .machine::before{
+      top:14px;
+      left:16px;
+      transform:rotate(-10deg);
+    }
+
+    .machine::after{
+      bottom:14px;
+      right:16px;
+      transform:rotate(12deg);
+    }
+
+    .display{
+      position:relative;
+      border-radius:24px;
+      background:linear-gradient(180deg, #fff1f7, #fff9fc);
+      border:2px solid #ffd4e5;
+      min-height:560px;
+      overflow:hidden;
+      padding:22px 18px 28px;
+    }
+
+    .display::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.45), transparent 24%, transparent 76%, rgba(255,255,255,.18));
+      pointer-events:none;
+    }
+
+    .stage{
+      position:relative;
+      width:100%;
+      min-height:470px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:12px;
+    }
+
+    .polaroid-wrap{
+      position:relative;
+      width:min(100%, 360px);
+      perspective:1200px;
+    }
+
+    .polaroid{
+      position:relative;
+      width:100%;
+      background:#fff;
+      border-radius:10px;
+      padding:16px 16px 64px;
+      box-shadow:
+        0 18px 28px rgba(159, 86, 118, .14),
+        0 6px 10px rgba(159, 86, 118, .10);
+      transform:rotate(-2deg) scale(1);
+      transition:transform .25s ease, box-shadow .25s ease;
+    }
+
+    .polaroid.idle{
+      animation:floaty 2.8s ease-in-out infinite;
+    }
+
+    @keyframes floaty{
+      0%,100%{ transform:rotate(-2deg) translateY(0); }
+      50%{ transform:rotate(-1deg) translateY(-6px); }
+    }
+
+    .polaroid.rolling{
+      animation:shakey .16s linear infinite;
+    }
+
+    @keyframes shakey{
+      0%   { transform:rotate(-2deg) translate(0,0) scale(1.01); }
+      25%  { transform:rotate(-1deg) translate(2px,-1px) scale(1.01); }
+      50%  { transform:rotate(-3deg) translate(-2px,1px) scale(1.01); }
+      75%  { transform:rotate(-1deg) translate(1px,1px) scale(1.01); }
+      100% { transform:rotate(-2deg) translate(0,0) scale(1.01); }
+    }
+
+    .polaroid.reveal{
+      animation:revealPop .7s ease;
+    }
+
+    @keyframes revealPop{
+      0%{ transform:rotate(-6deg) scale(.86); opacity:.7; }
+      40%{ transform:rotate(1deg) scale(1.05); opacity:1; }
+      100%{ transform:rotate(-2deg) scale(1); opacity:1; }
+    }
+
+    .tape{
+      position:absolute;
+      top:-10px;
+      width:82px;
+      height:24px;
+      background:linear-gradient(180deg, rgba(255,235,180,.75), rgba(255,226,162,.55));
+      border:1px solid rgba(237,202,120,.45);
+      box-shadow:0 4px 10px rgba(0,0,0,.05);
+      opacity:.92;
+      z-index:3;
+      backdrop-filter: blur(1px);
+    }
+
+    .tape.left{
+      left:18px;
+      transform:rotate(-13deg);
+      border-radius:6px 8px 7px 8px;
+    }
+
+    .tape.right{
+      right:18px;
+      transform:rotate(12deg);
+      border-radius:8px 6px 8px 7px;
+    }
+
+    .tape::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        repeating-linear-gradient(
+          90deg,
+          rgba(255,255,255,.20) 0 6px,
+          rgba(255,255,255,0) 6px 12px
+        );
+      mix-blend-mode:screen;
+    }
+
+    .photo-window{
+      position:relative;
+      width:100%;
+      aspect-ratio:3 / 4;
+      border-radius:6px;
+      overflow:hidden;
+      background:linear-gradient(135deg, #fff5fa, #ffe8f1);
+      box-shadow: inset 0 0 0 1px #f7dce7;
+    }
+
+    .photo-window::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:linear-gradient(180deg, rgba(255,255,255,.20), transparent 24%, transparent 80%, rgba(255,255,255,.10));
+      z-index:5;
+      pointer-events:none;
+    }
+
+    .slot{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      opacity:0;
+      transform:scale(1.03);
+      transition:opacity .14s ease, transform .16s ease, filter .16s ease;
+      filter:saturate(1.02) brightness(.99);
+    }
+
+    .slot.show{
+      opacity:1;
+      transform:scale(1);
+    }
+
+    .placeholder{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      padding:24px;
+      color:#b37a94;
+      font-size:17px;
+      line-height:1.9;
+      font-weight:800;
+      z-index:4;
+    }
+
+    .rolling-label{
+      position:absolute;
+      left:50%;
+      top:16px;
+      transform:translateX(-50%);
+      z-index:6;
+      display:none;
+      background:rgba(255,255,255,.88);
+      color:#e14491;
+      border:1px solid rgba(255,255,255,.95);
+      border-radius:999px;
+      padding:10px 16px;
+      font-size:14px;
+      font-weight:900;
+      letter-spacing:.08em;
+      box-shadow:0 8px 16px rgba(255,108,171,.16);
+      animation:pulse .8s ease-in-out infinite;
+    }
+
+    @keyframes pulse{
+      0%,100%{ transform:translateX(-50%) scale(1); }
+      50%{ transform:translateX(-50%) scale(1.05); }
+    }
+
+    .scanline{
+      position:absolute;
+      left:0;
+      right:0;
+      top:-28%;
+      height:28%;
+      background:linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,.55), rgba(255,255,255,0));
+      opacity:0;
+      z-index:6;
+      pointer-events:none;
+      mix-blend-mode:screen;
+    }
+
+    .polaroid.rolling .scanline{
+      opacity:1;
+      animation:scanMove .75s linear infinite;
+    }
+
+    @keyframes scanMove{
+      0%{ top:-28%; }
+      100%{ top:110%; }
+    }
+
+    .bottom-note{
+      position:absolute;
+      left:16px;
+      right:16px;
+      bottom:14px;
+      text-align:center;
+      z-index:6;
+    }
+
+    .result-banner{
+      display:none;
+      display:inline-block;
+      padding:8px 16px;
+      border-radius:999px;
+      background:linear-gradient(90deg, #fff0b5, #ffd66f);
+      color:#8d5f00;
+      font-size:15px;
+      font-weight:900;
+      box-shadow:0 10px 18px rgba(255,214,111,.26);
+    }
+
+    .caption{
+      margin-top:10px;
+      font-size:15px;
+      font-weight:800;
+      color:#815f70;
+      min-height:26px;
+    }
+
+    .filename{
+      margin-top:4px;
+      font-size:12px;
+      color:#a17d8c;
+      word-break:break-all;
+      min-height:18px;
+    }
+
+    .rare-sticker{
+      position:absolute;
+      right:-10px;
+      top:18px;
+      z-index:8;
+      display:none;
+      padding:10px 14px;
+      border-radius:999px;
+      background:linear-gradient(90deg, #ffe9a7, #ffd25e);
+      color:#8a5b00;
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.08em;
+      box-shadow:0 12px 18px rgba(255,210,94,.28);
+      transform:rotate(12deg);
+    }
+
+    .sparkles{
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      z-index:10;
+      overflow:hidden;
+    }
+
+    .spark{
+      position:absolute;
+      width:12px;
+      height:12px;
+      opacity:0;
+      animation:sparkle 1.2s ease-out forwards;
+      filter:drop-shadow(0 0 6px rgba(255,225,130,.6));
+    }
+
+    .spark::before{
+      content:"✦";
+      display:block;
+      width:100%;
+      height:100%;
+      color:#ffd76d;
+      font-size:14px;
+      line-height:12px;
+      text-align:center;
+    }
+
+    @keyframes sparkle{
+      0%{
+        opacity:0;
+        transform:translate(0,0) scale(.2) rotate(0deg);
+      }
+      15%{
+        opacity:1;
+      }
+      100%{
+        opacity:0;
+        transform:translate(var(--tx), var(--ty)) scale(1.5) rotate(120deg);
+      }
+    }
+
+    .flash{
+      position:absolute;
+      inset:0;
+      opacity:0;
+      pointer-events:none;
+      z-index:9;
+      background:radial-gradient(circle, rgba(255,255,255,.98), rgba(255,255,255,0) 64%);
+    }
+
+    .flash.active{
+      animation:flashbang .55s ease-out;
+    }
+
+    @keyframes flashbang{
+      0%{ opacity:0; }
+      25%{ opacity:.96; }
+      100%{ opacity:0; }
+    }
+
+    .decor-stars{
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+    }
+
+    .decor-stars span{
+      position:absolute;
+      color:#ffd3e5;
+      font-size:16px;
+      animation:twinkle 2.6s ease-in-out infinite;
+    }
+
+    .decor-stars span:nth-child(1){ top:28px; left:34px; animation-delay:0s; }
+    .decor-stars span:nth-child(2){ top:60px; right:38px; animation-delay:.5s; }
+    .decor-stars span:nth-child(3){ bottom:88px; left:44px; animation-delay:1s; }
+    .decor-stars span:nth-child(4){ bottom:46px; right:50px; animation-delay:1.5s; }
+
+    @keyframes twinkle{
+      0%,100%{ opacity:.45; transform:scale(1); }
+      50%{ opacity:1; transform:scale(1.18); }
+    }
+
+    .lights{
+      display:flex;
+      justify-content:center;
+      gap:9px;
+      margin-top:16px;
+    }
+
+    .light{
+      width:12px;
+      height:12px;
+      border-radius:50%;
+      background:#ffd7e8;
+      box-shadow:0 0 0 2px rgba(255,255,255,.65) inset;
+    }
+
+    .lights.rolling .light{
+      animation:blink .8s infinite;
+    }
+
+    .lights.rolling .light:nth-child(2){ animation-delay:.1s; }
+    .lights.rolling .light:nth-child(3){ animation-delay:.2s; }
+    .lights.rolling .light:nth-child(4){ animation-delay:.3s; }
+    .lights.rolling .light:nth-child(5){ animation-delay:.4s; }
+    .lights.rolling .light:nth-child(6){ animation-delay:.5s; }
+    .lights.rolling .light:nth-child(7){ animation-delay:.6s; }
+    .lights.rolling .light:nth-child(8){ animation-delay:.7s; }
+
+    @keyframes blink{
+      0%,100%{
+        background:#ffd7e8;
+        transform:scale(1);
+        box-shadow:0 0 0 2px rgba(255,255,255,.65) inset;
+      }
+      50%{
+        background:#ff73b2;
+        transform:scale(1.22);
+        box-shadow:0 0 16px rgba(255,115,178,.75);
+      }
+    }
+
+    .controls{
+      margin-top:20px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      justify-content:center;
+    }
+
+    .btn{
+      appearance:none;
+      border:none;
+      border-radius:999px;
+      padding:14px 26px;
+      font-size:16px;
+      font-weight:900;
+      cursor:pointer;
+      min-width:190px;
+      transition:transform .15s ease, box-shadow .15s ease, opacity .15s ease;
+    }
+
+    .btn:hover{
+      transform:translateY(-1px);
+    }
+
+    .btn:active{
+      transform:translateY(1px);
+    }
+
+    .btn:disabled{
+      opacity:.6;
+      cursor:not-allowed;
+      transform:none;
+    }
+
+    .btn-main{
+      background:linear-gradient(90deg, var(--accent), var(--accent2));
+      color:#fff;
+      box-shadow:0 12px 22px rgba(255,108,171,.28);
+    }
+
+    .btn-sub{
+      background:#fff;
+      color:#d74890;
+      border:1px solid #ffd4e5;
+      box-shadow:0 10px 18px rgba(255,108,171,.08);
+    }
+
+    .guide{
+      margin-top:18px;
+      background:#fff9fc;
+      border:1px solid #f5dce9;
+      border-radius:18px;
+      padding:14px 16px;
+      font-size:12px;
+      line-height:1.8;
+      color:#896d7a;
+    }
+
+    .guide code{
+      background:#fff;
+      border:1px solid #f2dae6;
+      border-radius:8px;
+      padding:2px 6px;
+      font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    @media (max-width: 640px){
+      .wrap{ padding:16px 12px 20px; border-radius:24px; }
+      h1{ font-size:24px; }
+      .sub{ font-size:13px; }
+      .display{ min-height:500px; padding:18px 12px 24px; }
+      .stage{ min-height:410px; }
+      .btn{ width:100%; min-width:0; }
+      .polaroid{ padding:14px 14px 58px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <div class="mini-badge">RANDOM CHEKI</div>
+      <h1>ランダムチェキ抽選</h1>
+      <p class="sub">
+        ポラロイド風フレームで、<br>
+        可愛くチェキが当たる抽選演出です。
+      </p>
+    </div>
+
+    <div class="machine">
+      <div class="display">
+        <div class="decor-stars">
+          <span>✦</span>
+          <span>✧</span>
+          <span>✦</span>
+          <span>✧</span>
+        </div>
+
+        <div class="stage">
+          <div class="polaroid-wrap">
+            <div class="rare-sticker" id="rareSticker">RARE</div>
+
+            <div class="tape left"></div>
+            <div class="tape right"></div>
+
+            <div class="polaroid idle" id="polaroid">
+              <div class="photo-window">
+                <img class="slot show" id="slotA" src="" alt="抽選画像A">
+                <img class="slot" id="slotB" src="" alt="抽選画像B">
+
+                <div class="placeholder" id="placeholder">
+                  ボタンを押して<br>抽選スタート
+                </div>
+
+                <div class="rolling-label" id="rollingLabel">抽選中…</div>
+                <div class="scanline"></div>
+                <div class="sparkles" id="sparkles"></div>
+                <div class="flash" id="flash"></div>
+              </div>
+
+              <div class="bottom-note">
+                <div class="result-banner" id="resultBanner">当選！</div>
+                <div class="caption" id="caption">まだ抽選していません</div>
+                <div class="filename" id="filename"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="lights" id="lights">
+          <div class="light"></div>
+          <div class="light"></div>
+          <div class="light"></div>
+          <div class="light"></div>
+          <div class="light"></div>
+          <div class="light"></div>
+          <div class="light"></div>
+          <div class="light"></div>
+        </div>
+
+        <div class="controls">
+          <button class="btn btn-main" id="drawBtn">抽選する</button>
+          <button class="btn btn-sub" id="redrawBtn">もう一回ひく</button>
+        </div>
+
+        <div class="guide">
+          <strong>使い方</strong><br>
+          1. 画像を <code>img</code> フォルダへ入れる<br>
+          2. 下の <code>chekiList</code> に画像パスを書く<br>
+          3. ブラウザで <code>index.html</code> を開く<br><br>
+
+          例：<code>img/cheki1.jpg</code><br>
+          レア画像にしたいものは <code>rarity: "rare"</code> を付けてください。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /*
+      ============================
+      ここに画像を登録
+      ============================
+      rarity:
+        "normal" = 通常
+        "rare"   = レア
+    */
+    const chekiList = [
+      { src: "img/cheki1.jpg", rarity: "normal" },
+      { src: "img/cheki2.jpg", rarity: "normal" },
+      { src: "img/cheki3.jpg", rarity: "rare" },
+      { src: "img/cheki4.jpg", rarity: "normal" },
+      { src: "img/cheki5.jpg", rarity: "rare" }
+    ];
+
+    const drawBtn = document.getElementById("drawBtn");
+    const redrawBtn = document.getElementById("redrawBtn");
+    const polaroid = document.getElementById("polaroid");
+    const slotA = document.getElementById("slotA");
+    const slotB = document.getElementById("slotB");
+    const placeholder = document.getElementById("placeholder");
+    const rollingLabel = document.getElementById("rollingLabel");
+    const resultBanner = document.getElementById("resultBanner");
+    const caption = document.getElementById("caption");
+    const filename = document.getElementById("filename");
+    const sparkles = document.getElementById("sparkles");
+    const flash = document.getElementById("flash");
+    const lights = document.getElementById("lights");
+    const rareSticker = document.getElementById("rareSticker");
+
+    let isRunning = false;
+    let activeSlot = slotA;
+    let inactiveSlot = slotB;
+
+    function preloadImages() {
+      chekiList.forEach(item => {
+        const img = new Image();
+        img.src = item.src;
+      });
+    }
+
+    function wait(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function getRandomIndex(max) {
+      return Math.floor(Math.random() * max);
+    }
+
+    function getRandomItem(arr) {
+      return arr[getRandomIndex(arr.length)];
+    }
+
+    function getFileName(path) {
+      return path.split("/").pop();
+    }
+
+    function swapSlots() {
+      const temp = activeSlot;
+      activeSlot = inactiveSlot;
+      inactiveSlot = temp;
+    }
+
+    function showImage(src) {
+      inactiveSlot.src = src;
+      inactiveSlot.classList.add("show");
+      activeSlot.classList.remove("show");
+      swapSlots();
+    }
+
+    function resetEffects() {
+      sparkles.innerHTML = "";
+      flash.classList.remove("active");
+      rareSticker.style.display = "none";
+      resultBanner.style.display = "none";
+      polaroid.classList.remove("reveal");
+    }
+
+    function setRollingState() {
+      polaroid.classList.remove("idle");
+      polaroid.classList.add("rolling");
+      lights.classList.add("rolling");
+      placeholder.style.display = "none";
+      rollingLabel.style.display = "inline-block";
+      resultBanner.style.display = "none";
+      rareSticker.style.display = "none";
+      caption.textContent = "抽選中...";
+      filename.textContent = "";
+    }
+
+    function setIdleState() {
+      polaroid.classList.remove("rolling");
+      polaroid.classList.add("idle");
+      lights.classList.remove("rolling");
+    }
+
+    function triggerFlash() {
+      flash.classList.remove("active");
+      void flash.offsetWidth;
+      flash.classList.add("active");
+    }
+
+    function createSparkles(count = 24) {
+      sparkles.innerHTML = "";
+
+      for (let i = 0; i < count; i++) {
+        const el = document.createElement("span");
+        el.className = "spark";
+
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 45 + Math.random() * 120;
+        const tx = Math.cos(angle) * distance + "px";
+        const ty = Math.sin(angle) * distance + "px";
+
+        el.style.left = (50 + (Math.random() * 24 - 12)) + "%";
+        el.style.top = (50 + (Math.random() * 24 - 12)) + "%";
+        el.style.setProperty("--tx", tx);
+        el.style.setProperty("--ty", ty);
+        el.style.animationDelay = (Math.random() * 0.18) + "s";
+
+        sparkles.appendChild(el);
+      }
+    }
+
+    function weightedPick(list) {
+      const box = [];
+      list.forEach(item => {
+        const weight = item.rarity === "rare" ? 35 : 100;
+        for (let i = 0; i < weight; i++) {
+          box.push(item);
+        }
+      });
+      return getRandomItem(box);
+    }
+
+    async function startDraw() {
+      if (isRunning) return;
+      if (!chekiList.length) {
+        alert("chekiList に画像がありません。");
+        return;
+      }
+
+      isRunning = true;
+      drawBtn.disabled = true;
+      redrawBtn.disabled = true;
+
+      resetEffects();
+      setRollingState();
+
+      let lastIndex = -1;
+      const totalFrames = 34;
+      const fastFrames = 18;
+      const middleFrames = 10;
+
+      for (let i = 0; i < totalFrames; i++) {
+        let nextIndex;
+        do {
+          nextIndex = getRandomIndex(chekiList.length);
+        } while (chekiList.length > 1 && nextIndex === lastIndex);
+
+        lastIndex = nextIndex;
+        const item = chekiList[nextIndex];
+        showImage(item.src);
+
+        if (i < fastFrames) {
+          await wait(70);
+        } else if (i < fastFrames + middleFrames) {
+          await wait(120);
+        } else if (i < totalFrames - 2) {
+          await wait(220);
+        } else {
+          await wait(340);
+        }
+      }
+
+      const winner = weightedPick(chekiList);
+
+      await wait(200);
+      showImage(winner.src);
+
+      rollingLabel.style.display = "none";
+      resultBanner.style.display = "inline-block";
+      caption.textContent = winner.rarity === "rare" ? "レアチェキ当選！" : "当選チェキはこちら！";
+      filename.textContent = getFileName(winner.src);
+
+      polaroid.classList.remove("rolling");
+      polaroid.classList.add("reveal");
+      setIdleState();
+
+      triggerFlash();
+      createSparkles(winner.rarity === "rare" ? 30 : 22);
+
+      if (winner.rarity === "rare") {
+        rareSticker.style.display = "inline-block";
+      }
+
+      drawBtn.disabled = false;
+      redrawBtn.disabled = false;
+      isRunning = false;
+    }
+
+    function resetView() {
+      if (isRunning) return;
+
+      resetEffects();
+      setIdleState();
+
+      activeSlot.src = "";
+      inactiveSlot.src = "";
+      activeSlot.classList.remove("show");
+      inactiveSlot.classList.remove("show");
+
+      placeholder.style.display = "flex";
+      rollingLabel.style.display = "none";
+      resultBanner.style.display = "none";
+      caption.textContent = "まだ抽選していません";
+      filename.textContent = "";
+    }
+
+    drawBtn.addEventListener("click", startDraw);
+    redrawBtn.addEventListener("click", startDraw);
+
+    preloadImages();
+    resetView();
+  </script>
+</body>
+</html>
