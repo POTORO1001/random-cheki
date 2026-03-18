@@ -358,7 +358,6 @@
 
     .result-banner{
       display:none;
-      display:inline-block;
       padding:8px 16px;
       border-radius:999px;
       background:linear-gradient(90deg, #fff0b5, #ffd66f);
@@ -572,25 +571,6 @@
       box-shadow:0 10px 18px rgba(255,108,171,.08);
     }
 
-    .guide{
-      margin-top:18px;
-      background:#fff9fc;
-      border:1px solid #f5dce9;
-      border-radius:18px;
-      padding:14px 16px;
-      font-size:12px;
-      line-height:1.8;
-      color:#896d7a;
-    }
-
-    .guide code{
-      background:#fff;
-      border:1px solid #f2dae6;
-      border-radius:8px;
-      padding:2px 6px;
-      font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    }
-
     @media (max-width: 640px){
       .wrap{ padding:16px 12px 20px; border-radius:24px; }
       h1{ font-size:24px; }
@@ -638,7 +618,7 @@
                   ボタンを押して<br>抽選スタート
                 </div>
 
-                <div class="rolling-label" id="rollingLabel">抽選中…</div>
+                <div class="rolling-label" id="rollingLabel">抽選中… ドラムロール！</div>
                 <div class="scanline"></div>
                 <div class="sparkles" id="sparkles"></div>
                 <div class="flash" id="flash"></div>
@@ -668,10 +648,15 @@
           <button class="btn btn-main" id="drawBtn">抽選する</button>
           <button class="btn btn-sub" id="redrawBtn">もう一回ひく</button>
         </div>
-
       </div>
     </div>
   </div>
+
+  <audio id="drumrollSound" preload="auto">
+    <source src="audio/drumroll.mp3" type="audio/mpeg">
+    <source src="audio/drumroll.ogg" type="audio/ogg">
+    <source src="audio/drumroll.wav" type="audio/wav">
+  </audio>
 
   <script>
     /*
@@ -681,6 +666,21 @@
       rarity:
         "normal" = 通常
         "rare"   = レア
+
+      ============================
+      効果音ファイル
+      ============================
+      audio/drumroll.mp3
+      または
+      audio/drumroll.ogg
+      または
+      audio/drumroll.wav
+
+      フォルダ例:
+      ├─ index.html
+      ├─ img/
+      └─ audio/
+          └─ drumroll.mp3
     */
     const chekiList = [
       { src: "img/cheki1.jpg", rarity: "normal" },
@@ -704,6 +704,7 @@
     const flash = document.getElementById("flash");
     const lights = document.getElementById("lights");
     const rareSticker = document.getElementById("rareSticker");
+    const drumrollSound = document.getElementById("drumrollSound");
 
     let isRunning = false;
     let activeSlot = slotA;
@@ -714,6 +715,27 @@
         const img = new Image();
         img.src = item.src;
       });
+    }
+
+    function setupSound() {
+      drumrollSound.volume = 1.0;
+      drumrollSound.loop = true;
+    }
+
+    async function playDrumroll() {
+      try {
+        drumrollSound.currentTime = 0;
+        drumrollSound.volume = 1.0;
+        drumrollSound.loop = true;
+        await drumrollSound.play();
+      } catch (error) {
+        console.warn("ドラムロールを再生できませんでした。", error);
+      }
+    }
+
+    function stopDrumroll() {
+      drumrollSound.pause();
+      drumrollSound.currentTime = 0;
     }
 
     function wait(ms) {
@@ -761,7 +783,7 @@
       rollingLabel.style.display = "inline-block";
       resultBanner.style.display = "none";
       rareSticker.style.display = "none";
-      caption.textContent = "抽選中...";
+      caption.textContent = "抽選中... ドラムロール再生中！";
       filename.textContent = "";
     }
 
@@ -823,6 +845,7 @@
 
       resetEffects();
       setRollingState();
+      await playDrumroll();
 
       let lastIndex = -1;
       const totalFrames = 34;
@@ -854,6 +877,7 @@
 
       await wait(200);
       showImage(winner.src);
+      stopDrumroll();
 
       rollingLabel.style.display = "none";
       resultBanner.style.display = "inline-block";
@@ -879,6 +903,7 @@
     function resetView() {
       if (isRunning) return;
 
+      stopDrumroll();
       resetEffects();
       setIdleState();
 
@@ -897,6 +922,7 @@
     drawBtn.addEventListener("click", startDraw);
     redrawBtn.addEventListener("click", startDraw);
 
+    setupSound();
     preloadImages();
     resetView();
   </script>
