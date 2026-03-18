@@ -660,6 +660,12 @@
     <source src="audio/drumroll.wav" type="audio/wav">
   </audio>
 
+  <audio id="janSound" preload="auto">
+    <source src="audio/jan.mp3" type="audio/mpeg">
+    <source src="audio/jan.ogg" type="audio/ogg">
+    <source src="audio/jan.wav" type="audio/wav">
+  </audio>
+
   <script>
     const chekiList = [
       { src: "img/cheki1.jpg", rarity: "normal" },
@@ -684,6 +690,7 @@
     const lights = document.getElementById("lights");
     const rareSticker = document.getElementById("rareSticker");
     const drumrollSound = document.getElementById("drumrollSound");
+    const janSound = document.getElementById("janSound");
 
     let isRunning = false;
     let activeSlot = slotA;
@@ -697,37 +704,58 @@
     }
 
     function setupSound() {
-      if (!drumrollSound) return;
-      drumrollSound.volume = 1.0;
-      drumrollSound.loop = true;
-    }
-
-    function playDrumroll() {
-      if (!drumrollSound) return;
-      try {
-        drumrollSound.pause();
-        drumrollSound.currentTime = 0;
+      if (drumrollSound) {
         drumrollSound.volume = 1.0;
         drumrollSound.loop = true;
-        const promise = drumrollSound.play();
+      }
+      if (janSound) {
+        janSound.volume = 1.0;
+        janSound.loop = false;
+      }
+    }
+
+    function safePlay(audioEl, { reset = true, loop = false, volume = 1.0 } = {}) {
+      if (!audioEl) return;
+      try {
+        audioEl.pause();
+        if (reset) audioEl.currentTime = 0;
+        audioEl.loop = loop;
+        audioEl.volume = volume;
+        const promise = audioEl.play();
         if (promise && typeof promise.catch === "function") {
           promise.catch((error) => {
-            console.warn("ドラムロールを再生できませんでした。", error);
+            console.warn("音声を再生できませんでした。", error);
           });
         }
       } catch (error) {
-        console.warn("ドラムロールを再生できませんでした。", error);
+        console.warn("音声を再生できませんでした。", error);
       }
     }
 
-    function stopDrumroll() {
-      if (!drumrollSound) return;
+    function safeStop(audioEl) {
+      if (!audioEl) return;
       try {
-        drumrollSound.pause();
-        drumrollSound.currentTime = 0;
+        audioEl.pause();
+        audioEl.currentTime = 0;
       } catch (error) {
-        console.warn("ドラムロール停止時にエラーが発生しました。", error);
+        console.warn("音声停止時にエラーが発生しました。", error);
       }
+    }
+
+    function playDrumroll() {
+      safePlay(drumrollSound, { reset: true, loop: true, volume: 1.0 });
+    }
+
+    function stopDrumroll() {
+      safeStop(drumrollSound);
+    }
+
+    function playJan() {
+      safePlay(janSound, { reset: true, loop: false, volume: 1.0 });
+    }
+
+    function stopJan() {
+      safeStop(janSound);
     }
 
     function wait(ms) {
@@ -836,6 +864,7 @@
       redrawBtn.disabled = true;
 
       try {
+        stopJan();
         resetEffects();
         setRollingState();
         playDrumroll();
@@ -871,6 +900,9 @@
         await wait(200);
         showImage(winner.src);
 
+        stopDrumroll();
+        playJan();
+
         rollingLabel.style.display = "none";
         resultBanner.style.display = "inline-block";
         caption.textContent = winner.rarity === "rare" ? "レアチェキ当選！" : "当選チェキはこちら！";
@@ -904,6 +936,7 @@
       if (isRunning) return;
 
       stopDrumroll();
+      stopJan();
       resetEffects();
       setIdleState();
 
