@@ -317,6 +317,7 @@
       letter-spacing:.08em;
       box-shadow:0 8px 16px rgba(255,108,171,.16);
       animation:pulse .8s ease-in-out infinite;
+      white-space:nowrap;
     }
 
     @keyframes pulse{
@@ -579,6 +580,7 @@
       .stage{ min-height:410px; }
       .btn{ width:100%; min-width:0; }
       .polaroid{ padding:14px 14px 58px; }
+      .rolling-label{ font-size:12px; padding:8px 12px; }
     }
   </style>
 </head>
@@ -659,29 +661,6 @@
   </audio>
 
   <script>
-    /*
-      ============================
-      ここに画像を登録
-      ============================
-      rarity:
-        "normal" = 通常
-        "rare"   = レア
-
-      ============================
-      効果音ファイル
-      ============================
-      audio/drumroll.mp3
-      または
-      audio/drumroll.ogg
-      または
-      audio/drumroll.wav
-
-      フォルダ例:
-      ├─ index.html
-      ├─ img/
-      └─ audio/
-          └─ drumroll.mp3
-    */
     const chekiList = [
       { src: "img/cheki1.jpg", rarity: "normal" },
       { src: "img/cheki2.jpg", rarity: "normal" },
@@ -718,24 +697,37 @@
     }
 
     function setupSound() {
+      if (!drumrollSound) return;
       drumrollSound.volume = 1.0;
       drumrollSound.loop = true;
     }
 
-    async function playDrumroll() {
+    function playDrumroll() {
+      if (!drumrollSound) return;
       try {
+        drumrollSound.pause();
         drumrollSound.currentTime = 0;
         drumrollSound.volume = 1.0;
         drumrollSound.loop = true;
-        await drumrollSound.play();
+        const promise = drumrollSound.play();
+        if (promise && typeof promise.catch === "function") {
+          promise.catch((error) => {
+            console.warn("ドラムロールを再生できませんでした。", error);
+          });
+        }
       } catch (error) {
         console.warn("ドラムロールを再生できませんでした。", error);
       }
     }
 
     function stopDrumroll() {
-      drumrollSound.pause();
-      drumrollSound.currentTime = 0;
+      if (!drumrollSound) return;
+      try {
+        drumrollSound.pause();
+        drumrollSound.currentTime = 0;
+      } catch (error) {
+        console.warn("ドラムロール停止時にエラーが発生しました。", error);
+      }
     }
 
     function wait(ms) {
@@ -843,61 +835,69 @@
       drawBtn.disabled = true;
       redrawBtn.disabled = true;
 
-      resetEffects();
-      setRollingState();
-      await playDrumroll();
+      try {
+        resetEffects();
+        setRollingState();
+        playDrumroll();
 
-      let lastIndex = -1;
-      const totalFrames = 34;
-      const fastFrames = 18;
-      const middleFrames = 10;
+        let lastIndex = -1;
+        const totalFrames = 34;
+        const fastFrames = 18;
+        const middleFrames = 10;
 
-      for (let i = 0; i < totalFrames; i++) {
-        let nextIndex;
-        do {
-          nextIndex = getRandomIndex(chekiList.length);
-        } while (chekiList.length > 1 && nextIndex === lastIndex);
+        for (let i = 0; i < totalFrames; i++) {
+          let nextIndex;
+          do {
+            nextIndex = getRandomIndex(chekiList.length);
+          } while (chekiList.length > 1 && nextIndex === lastIndex);
 
-        lastIndex = nextIndex;
-        const item = chekiList[nextIndex];
-        showImage(item.src);
+          lastIndex = nextIndex;
+          const item = chekiList[nextIndex];
+          showImage(item.src);
 
-        if (i < fastFrames) {
-          await wait(70);
-        } else if (i < fastFrames + middleFrames) {
-          await wait(120);
-        } else if (i < totalFrames - 2) {
-          await wait(220);
-        } else {
-          await wait(340);
+          if (i < fastFrames) {
+            await wait(70);
+          } else if (i < fastFrames + middleFrames) {
+            await wait(120);
+          } else if (i < totalFrames - 2) {
+            await wait(220);
+          } else {
+            await wait(340);
+          }
         }
+
+        const winner = weightedPick(chekiList);
+
+        await wait(200);
+        showImage(winner.src);
+
+        rollingLabel.style.display = "none";
+        resultBanner.style.display = "inline-block";
+        caption.textContent = winner.rarity === "rare" ? "レアチェキ当選！" : "当選チェキはこちら！";
+        filename.textContent = getFileName(winner.src);
+
+        polaroid.classList.remove("rolling");
+        polaroid.classList.add("reveal");
+        setIdleState();
+
+        triggerFlash();
+        createSparkles(winner.rarity === "rare" ? 30 : 22);
+
+        if (winner.rarity === "rare") {
+          rareSticker.style.display = "inline-block";
+        }
+      } catch (error) {
+        console.error("抽選処理中にエラーが発生しました。", error);
+        caption.textContent = "エラーが発生しました";
+        filename.textContent = "";
+        rollingLabel.style.display = "none";
+        setIdleState();
+      } finally {
+        stopDrumroll();
+        drawBtn.disabled = false;
+        redrawBtn.disabled = false;
+        isRunning = false;
       }
-
-      const winner = weightedPick(chekiList);
-
-      await wait(200);
-      showImage(winner.src);
-      stopDrumroll();
-
-      rollingLabel.style.display = "none";
-      resultBanner.style.display = "inline-block";
-      caption.textContent = winner.rarity === "rare" ? "レアチェキ当選！" : "当選チェキはこちら！";
-      filename.textContent = getFileName(winner.src);
-
-      polaroid.classList.remove("rolling");
-      polaroid.classList.add("reveal");
-      setIdleState();
-
-      triggerFlash();
-      createSparkles(winner.rarity === "rare" ? 30 : 22);
-
-      if (winner.rarity === "rare") {
-        rareSticker.style.display = "inline-block";
-      }
-
-      drawBtn.disabled = false;
-      redrawBtn.disabled = false;
-      isRunning = false;
     }
 
     function resetView() {
