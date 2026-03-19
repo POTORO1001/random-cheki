@@ -588,9 +588,10 @@
   <div class="wrap">
     <div class="header">
       <div class="mini-badge">RANDOM CHEKI</div>
-      <h1>ランダムチェキ抽選の儀</h1>
+      <h1>ランダムチェキ抽選</h1>
       <p class="sub">
-        ドキドキ♡　キャーキャー♡
+        ポラロイド風フレームで、<br>
+        可愛くチェキが当たる抽選演出です。
       </p>
     </div>
 
@@ -619,14 +620,14 @@
                   ボタンを押して<br>抽選スタート
                 </div>
 
-                <div class="rolling-label" id="rollingLabel">抽選中…！！</div>
+                <div class="rolling-label" id="rollingLabel">抽選中… ドラムロール！</div>
                 <div class="scanline"></div>
                 <div class="sparkles" id="sparkles"></div>
                 <div class="flash" id="flash"></div>
               </div>
 
               <div class="bottom-note">
-                <div class="result-banner" id="resultBanner">当選！！</div>
+                <div class="result-banner" id="resultBanner">当選！</div>
                 <div class="caption" id="caption">まだ抽選していません</div>
                 <div class="filename" id="filename"></div>
               </div>
@@ -694,6 +695,7 @@
     let isRunning = false;
     let activeSlot = slotA;
     let inactiveSlot = slotB;
+    let audioUnlocked = false;
 
     function preloadImages() {
       chekiList.forEach(item => {
@@ -706,11 +708,36 @@
       if (drumrollSound) {
         drumrollSound.volume = 1.0;
         drumrollSound.loop = true;
+        drumrollSound.load();
       }
       if (janSound) {
         janSound.volume = 1.0;
         janSound.loop = false;
+        janSound.load();
       }
+    }
+
+    async function unlockAudio() {
+      if (audioUnlocked) return;
+      const targets = [drumrollSound, janSound].filter(Boolean);
+
+      for (const audioEl of targets) {
+        try {
+          audioEl.muted = true;
+          audioEl.currentTime = 0;
+          const p = audioEl.play();
+          if (p && typeof p.then === "function") {
+            await p;
+          }
+          audioEl.pause();
+          audioEl.currentTime = 0;
+          audioEl.muted = false;
+        } catch (e) {
+          audioEl.muted = false;
+        }
+      }
+
+      audioUnlocked = true;
     }
 
     function safePlay(audioEl, { reset = true, loop = false, volume = 1.0 } = {}) {
@@ -720,6 +747,8 @@
         if (reset) audioEl.currentTime = 0;
         audioEl.loop = loop;
         audioEl.volume = volume;
+        audioEl.muted = false;
+
         const promise = audioEl.play();
         if (promise && typeof promise.catch === "function") {
           promise.catch((error) => {
@@ -802,7 +831,7 @@
       rollingLabel.style.display = "inline-block";
       resultBanner.style.display = "none";
       rareSticker.style.display = "none";
-      caption.textContent = "抽選中...！！";
+      caption.textContent = "抽選中... ドラムロール再生中！";
       filename.textContent = "";
     }
 
@@ -863,6 +892,8 @@
       redrawBtn.disabled = true;
 
       try {
+        await unlockAudio();
+
         stopJan();
         resetEffects();
         setRollingState();
