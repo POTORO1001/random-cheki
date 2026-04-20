@@ -696,6 +696,7 @@
     let activeSlot = slotA;
     let inactiveSlot = slotB;
     let audioUnlocked = false;
+    let lastWinnerSrc = null;
 
     function preloadImages() {
       chekiList.forEach(item => {
@@ -925,10 +926,17 @@
           }
         }
 
-        const winner = weightedPick(chekiList);
+        const eligibleList =
+          chekiList.length > 1
+            ? chekiList.filter(item => item.src !== lastWinnerSrc)
+            : chekiList;
+
+        const winner = weightedPick(eligibleList);
 
         await wait(200);
         showImage(winner.src);
+
+        lastWinnerSrc = winner.src;
 
         stopDrumroll();
         playJan();
