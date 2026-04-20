@@ -1,2 +1,2 @@
 imgフォルダに、
-cheki1〜cheki5の名前を付けた画像ファイルを入れるだけ
+cheki1.jpg〜cheki5.jpgの名前を付けた画像ファイルを入れるだけ
